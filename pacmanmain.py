@@ -11,7 +11,19 @@ timer = pygame.time.Clock()
 fps = 60
 font = pygame.font.Font('freesansbold.ttf', 20)
 level = copy.deepcopy(board.boards)
-color = 'blue'
+# UI color palette
+BG = (5, 7, 18)
+PANEL = (13, 18, 38)
+PANEL_2 = (20, 26, 52)
+WHITE = (245, 248, 255)
+MUTED = (145, 156, 185)
+CYAN = (50, 220, 255)
+YELLOW = (255, 215, 60)
+RED = (255, 80, 105)
+GREEN = (70, 235, 145)
+BLUE = (80, 130, 255)
+
+color = CYAN
 PI = math.pi
 player_images = []
 for i in range(1, 5):
@@ -62,6 +74,8 @@ startup_counter = 0
 lives = 3
 game_over = False
 game_won = False
+show_start_screen = True
+start_blink = 0
 
 
 class Ghost:
@@ -657,23 +671,100 @@ class Ghost:
         return self.x_pos, self.y_pos, self.direction
 
 
-def draw_misc():
-    score_text = font.render(f'Score: {score}', True, 'white')
-    screen.blit(score_text, (10, 920))
+
+# =========================
+# MODERN UI / HUD UPGRADE
+# Add these constants after pygame.init()
+# =========================
+BG = (5, 7, 18)
+PANEL = (13, 18, 38)
+PANEL_2 = (20, 26, 52)
+WHITE = (245, 248, 255)
+MUTED = (145, 156, 185)
+CYAN = (50, 220, 255)
+YELLOW = (255, 215, 60)
+RED = (255, 80, 105)
+GREEN = (70, 235, 145)
+BLUE = (80, 130, 255)
+
+title_font = pygame.font.SysFont("arial", 34, bold=True)
+hud_font = pygame.font.SysFont("arial", 22, bold=True)
+small_font = pygame.font.SysFont("arial", 16, bold=True)
+big_font = pygame.font.SysFont("arial", 48, bold=True)
+
+def rounded_panel(rect, fill=PANEL, border=PANEL_2, radius=14, width=2):
+    pygame.draw.rect(screen, fill, rect, border_radius=radius)
+    pygame.draw.rect(screen, border, rect, width, border_radius=radius)
+
+def draw_text(text, font_obj, pos, color=WHITE, center=False):
+    surf = font_obj.render(str(text), True, color)
+    rect = surf.get_rect()
+    if center:
+        rect.center = pos
+    else:
+        rect.topleft = pos
+    screen.blit(surf, rect)
+    return rect
+
+def draw_modern_hud():
+    # Bottom HUD replaces the old plain score/lives presentation.
+    pygame.draw.rect(screen, BG, (0, 895, WIDTH, 55))
+    pygame.draw.line(screen, PANEL_2, (0, 895), (WIDTH, 895), 2)
+
+    rounded_panel((14, 905, 205, 38), PANEL, PANEL_2, 10, 1)
+    draw_text("SCORE", small_font, (28, 916), MUTED)
+    draw_text(f"{score:,}", hud_font, (93, 911), YELLOW)
+
+    rounded_panel((230, 905, 240, 38), PANEL, PANEL_2, 10, 1)
+    draw_text("POWER", small_font, (244, 916), MUTED)
     if powerup:
-        pygame.draw.circle(screen, 'blue', (140, 930), 15)
+        remaining = max(0, 600 - power_counter)
+        pct = remaining / 600
+        pygame.draw.rect(screen, (35, 42, 65), (315, 917, 135, 10), border_radius=5)
+        pygame.draw.rect(screen, CYAN, (315, 917, int(135 * pct), 10), border_radius=5)
+    else:
+        draw_text("READY", small_font, (315, 914), MUTED)
+
+    rounded_panel((490, 905, 185, 38), PANEL, PANEL_2, 10, 1)
+    draw_text("LIVES", small_font, (505, 916), MUTED)
     for i in range(lives):
-        screen.blit(pygame.transform.scale(player_images[0], (30, 30)), (650 + i * 40, 915))
+        icon = pygame.transform.scale(player_images[0], (25, 25))
+        screen.blit(icon, (570 + i * 31, 911))
+
+    rounded_panel((695, 905, 191, 38), PANEL, PANEL_2, 10, 1)
+    draw_text("ARROWS", small_font, (711, 916), MUTED)
+    draw_text("MOVE", small_font, (786, 914), WHITE)
+
+def draw_overlay(title, subtitle, accent):
+    # Dim the board without hiding it completely.
+    shade = pygame.Surface((WIDTH, 895), pygame.SRCALPHA)
+    shade.fill((0, 0, 0, 165))
+    screen.blit(shade, (0, 0))
+
+    card = pygame.Rect(145, 270, 610, 245)
+    rounded_panel(card, PANEL, accent, 20, 3)
+
+    draw_text(title, big_font, (450, 335), accent, center=True)
+    draw_text(subtitle, hud_font, (450, 405), WHITE, center=True)
+
+    button = pygame.Rect(275, 445, 350, 48)
+    rounded_panel(button, PANEL_2, accent, 14, 2)
+    draw_text("PRESS SPACE TO PLAY AGAIN", small_font, button.center, WHITE, center=True)
+
+def draw_game_title():
+    # Small title above the maze.
+    draw_text("PAC-MAN", title_font, (WIDTH // 2, 22), YELLOW, center=True)
+    draw_text("NEON MAZE", small_font, (WIDTH // 2, 55), MUTED, center=True)
+
+# =========================
+# REPLACE draw_misc() WITH:
+# =========================
+def draw_misc():
+    draw_modern_hud()
     if game_over:
-        pygame.draw.rect(screen, 'white', [50, 200, 800, 300], 0, 10)
-        pygame.draw.rect(screen, 'darkgray', [70, 220, 760, 260], 0, 10)
-        gameover_text = font.render('Game over! Space bar to restart!', True, 'red')
-        screen.blit(gameover_text, (100, 300))
-    if game_won:
-        pygame.draw.rect(screen, 'white', [50, 200, 800, 300], 0, 10)
-        pygame.draw.rect(screen, 'darkgray', [70, 220, 760, 260], 0, 10)
-        gameover_text = font.render('Victory! Space bar to restart!', True, 'green')
-        screen.blit(gameover_text, (100, 300))
+        draw_overlay("GAME OVER", f"Final Score  {score:,}", RED)
+    elif game_won:
+        draw_overlay("VICTORY!", f"Score  {score:,}", GREEN)
 
 
 def check_collisions(scor, power, power_count, eaten_ghosts):
@@ -878,9 +969,60 @@ def get_targets(blink_x, blink_y, ink_x, ink_y, pink_x, pink_y, clyd_x, clyd_y):
     return [blink_target, ink_target, pink_target, clyd_target]
 
 
+
+def draw_start_screen():
+    global start_blink
+
+    start_blink = (start_blink + 1) % 60
+    screen.fill(BG)
+
+    # Decorative arcade frame
+    pygame.draw.rect(screen, CYAN, (55, 55, WIDTH - 110, HEIGHT - 135), 3, border_radius=25)
+    pygame.draw.rect(screen, PANEL_2, (70, 70, WIDTH - 140, HEIGHT - 165), 2, border_radius=20)
+
+    draw_text("PAC-MAN", big_font, (WIDTH // 2, 155), YELLOW, center=True)
+    draw_text("NEON MAZE", title_font, (WIDTH // 2, 210), CYAN, center=True)
+
+    # Pac-Man and ghosts preview
+    try:
+        pac = pygame.transform.scale(player_images[0], (70, 70))
+        screen.blit(pac, pac.get_rect(center=(330, 315)))
+        for idx, img in enumerate([blinky_img, pinky_img, inky_img, clyde_img]):
+            ghost = pygame.transform.scale(img, (55, 55))
+            screen.blit(ghost, ghost.get_rect(center=(430 + idx * 65, 315)))
+    except Exception:
+        pass
+
+    rounded_panel((205, 390, 490, 105), PANEL, CYAN, 18, 2)
+    draw_text("ARROW KEYS", hud_font, (450, 420), WHITE, center=True)
+    draw_text("MOVE THROUGH THE MAZE", small_font, (450, 455), MUTED, center=True)
+
+    rounded_panel((250, 535, 400, 65), PANEL_2, YELLOW, 16, 2)
+    if start_blink < 45:
+        draw_text("PRESS SPACE TO START", hud_font, (450, 568), YELLOW, center=True)
+
+    draw_text("Eat pellets • Collect power-ups • Escape the ghosts",
+              small_font, (450, 665), MUTED, center=True)
+    draw_text("3 LIVES", small_font, (450, 700), RED, center=True)
+
+
 run = True
 while run:
     timer.tick(fps)
+
+    # Startup screen
+    if show_start_screen:
+        draw_start_screen()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
+                    show_start_screen = False
+                    startup_counter = 0
+        pygame.display.flip()
+        continue
+
     if counter < 19:
         counter += 1
         if counter > 3:
@@ -900,7 +1042,8 @@ while run:
     else:
         moving = True
 
-    screen.fill('black')
+    screen.fill(BG)
+    draw_game_title()
     draw_board()
     center_x = player_x + 23
     center_y = player_y + 24
@@ -1215,6 +1358,5 @@ while run:
 
     pygame.display.flip()
 pygame.quit()
-
 
 
